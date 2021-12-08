@@ -1,0 +1,16 @@
+{
+  "name": "m3u8-download",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "start": "nodemon --watch app.js --exec npm run build",
+    "build": "electron ."
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^15.1.0",
+    "nodemon": "^2.0.13"
+  }
+}

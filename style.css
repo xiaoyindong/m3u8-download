@@ -1,0 +1,110 @@
+html {
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    font-size: 14px;
+    background-color: #0170fe;
+}
+body {
+    margin: 15px;
+    background-color: #f3f5f9;
+}
+.header_part {
+    padding: 10px 15px;
+}
+.header_part span {
+    padding-right: 10px;
+    color: #0170fe;
+    cursor: pointer;
+}
+#content_part {
+    padding: 10px 15px;
+}
+#content_part .content_line {
+    background: #d9f6ff;
+    font-size: 13px;
+    display: flex;
+}
+#content_part .content_line div {
+    padding: 8px;
+    flex: 3;
+}
+#content_part .content_line .action, #content_part .content_line .process {
+    flex: 1;
+}
+#download_list .content_line:nth-of-type(2n - 1) {
+    background-color: #fff;
+}
+#mask {
+    position: fixed;
+    display: none;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 1000;
+    background-color: rgba(0,0,0,0.45);
+}
+#new_task_modal {
+    display: none;
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+    z-index: 1001;
+    background-color: #fff;
+    width: 85%;
+    height: 160px;
+    padding: 24px 15px;
+}
+#set_modal {
+    position: fixed;
+    display: none;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+    z-index: 1001;
+    background-color: #fff;
+    width: 85%;
+    height: 100px;
+    padding: 24px 15px;
+}
+.modal_line {
+    display: flex;
+    padding: 10px;
+    justify-content: center;
+    align-items: center;
+}
+.modal_line div {
+    width: 60px;
+}
+.modal_line span {
+    width: 40px;
+    text-align: center;
+    color: #0170fe;
+    cursor: pointer;
+}
+.modal_line input {
+    flex: 1;
+    height: 24px;
+    outline: none;
+}
+.modal_line button {
+    margin: 0 15px;
+    width: 80px;
+    height: 32px;
+    background-color: #0170fe;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    border-radius: 3px;
+}
+.action span {
+    margin-right: 25px;
+    color: #0170fe;
+    cursor: pointer;
+}

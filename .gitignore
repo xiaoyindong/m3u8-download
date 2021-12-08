@@ -1,0 +1,10 @@
+.vscode
+.DS_Store
+build/
+.idea
+node_modules
+npm-debug.log
+yarn-error.log
+package-lock.json
+
+setup.txt

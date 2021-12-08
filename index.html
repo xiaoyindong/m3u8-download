@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>M3U8下载器</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      -webkit-app-region: drag;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header_part">
+    <span id="add_new_task_button">新建</span>
+    <span id="set_button">设置</span>
+  </div>
+  <div id="content_part">
+    <div>
+      <div class="content_line">
+        <div>序号</div>
+        <div>名称</div>
+        <div class="process">进度</div>
+        <div class="action">操作</div>
+      </div>
+    </div>
+    <div id="download_list"></div>
+  </div>
+  <div id="mask"></div>
+  <div id="new_task_modal">
+    <div class="modal_line">
+      <div>下载地址</div>
+      <input id="download_link" placeholder="请输入下载地址" />
+    </div>
+    <div class="modal_line">
+      <div>资源名称</div>
+      <input id="download_filename" placeholder="请输入文件名称，如无后缀默认mp4"/>
+    </div>
+    <div class="modal_line">
+      <button id="download_make">确定</button>
+      <button class="cancel_modal">取消</button>
+    </div>
+  </div>
+  <div id="set_modal">
+    <div class="modal_line">
+      <div>存储地址</div>
+      <input id="directory_input" placeholder="请输入存储路径" />
+      <span id="select_directory">选择</span>
+      <!-- <input type="file" webkitdirectory directory multiple/> -->
+    </div>
+    <div class="modal_line">
+      <button id="directory_make">确定</button>
+      <button class="cancel_modal">取消</button>
+    </div>
+  </div>
+  <script src="event.js"></script>
+</body>
+
+</html>
