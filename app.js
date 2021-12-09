@@ -2,6 +2,7 @@ const electron = require('electron');
 const { app, BrowserWindow, ipcMain, dialog } = electron;
 const fs = require('fs');
 const path = require('path');
+const { exec, execSync } = require('child_process');
 const fetch = require('./fetch');
 
 const configDir = path.resolve('./config.json');
@@ -82,6 +83,24 @@ ipcMain.on('render', (event) => {
     sendRender(event);
 })
 
+
+
+ipcMain.on('set_ffmpeg', (event) => {
+    const result = execSync('ffmpeg -version').toString();
+    if (result.includes('ffmpeg version')) {
+        event.sender.send('ffmpeg_success');
+        return;
+    }
+    const dir = path.resolve('lib');
+    exec(`cd ${dir} && tar zxvf yasm.tar.gz && cd yasm && ./configure && sudo make && sudo make install`);
+    exec(`cd ${dir} && tar zxvf lame.tar.gz && cd lame && ./configure && make && make install`);
+    exec(`cd ${dir} && tar zxvf ffmpeg.tar.gz && cd ffmpeg && ./configure && make && sudo make install`, () => {
+        if (event.sender && event.sender.send) {
+            event.sender.send('ffmpeg_success');
+        }
+    });
+})
+
 function sendRender(event) {
     event.sender.send('render_html', JSON.stringify(config));
     fs.writeFileSync(configDir, JSON.stringify(config));
@@ -117,7 +136,9 @@ const download = () => {
                     item.process = Math.round(item.finish.length / (item.source.length + item.fail.length) * 100) + '%';
                     const link = `${path.resolve('temp')}/${item.temp}/`;
                     if (!fs.existsSync(link)) {
-                        fs.mkdirSync(link);
+                        fs.mkdirSync(link, {
+                            recursive: true,
+                        });
                     }
                     fs.writeFileSync(`${link}${name}`, content);
                 }).catch((err) => {

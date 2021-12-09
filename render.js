@@ -4,6 +4,10 @@ const { ipcRenderer } = require('electron');
 window.addEventListener('DOMContentLoaded', () => {
     const dirctionInput = document.querySelector('#directory_input');
 
+    document.querySelector('#set_ffmpeg').onclick = () => {
+        ipcRenderer.send('set_ffmpeg');
+    }
+
     document.querySelector('#directory_make').onclick = () => {
         const value = dirctionInput.value.trim();
         if (value) {
@@ -59,6 +63,10 @@ window.addEventListener('DOMContentLoaded', () => {
     ipcRenderer.on('render_html', (event, data) => {
         render(JSON.parse(data).download || []);
     })
+    ipcRenderer.on('ffmpeg_success', () => {
+        document.querySelector('#set_ffmpeg').innerText = '已安装';
+    })
+    
     function render(download) {
         let str = '';
         download.forEach((item, idx) => {
