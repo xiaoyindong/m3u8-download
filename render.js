@@ -77,7 +77,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 text = `<span data-type="1" data-index="${idx}">暂停</span>`;''
             }
             if (item.downloaded) {
-                text = `<span data-type="3" data-index="${idx}" style="color: yellow">合成中</span>`
+                text = `<span data-type="3" data-index="${idx}" style="color: yellow">合成</span>`
             }
             if (item.completed) {
                 text = `<span data-type="4" data-index="${idx}" style="color: green">完成</span>`

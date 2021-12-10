@@ -2,8 +2,8 @@ const electron = require('electron');
 const { app, BrowserWindow, ipcMain, dialog } = electron;
 const fs = require('fs');
 const path = require('path');
+const axios = require('axios');
 const { exec, execSync } = require('child_process');
-const fetch = require('./fetch');
 
 const configDir = path.resolve('./config.json');
 
@@ -56,27 +56,31 @@ ipcMain.on('update_direction', (event, data) => {
     config.direction = data;
 })
 
+// 新增
 ipcMain.on('push_download', (event, data) => {
     config.download.push(JSON.parse(data));
     sendRender(event);
+    download();
 })
 
+// 暂停
 ipcMain.on('update_download_status', (event, index) => {
     config.download[index].paused = !config.download[index].paused;
     sendRender(event);
+    download();
 })
-
+// 删除
 ipcMain.on('delete_download', (event, index) => {
     const [item] = config.download.splice(index, 1);
     if (item) {
         const link = `${path.resolve('temp')}/${item.temp}`;
-        if (fs.existsSync(link)) {
-            fs.rmdirSync(link, {
-                recursive: true, // 递归删除
-            });
-        }
+        fs.rmSync(link, {
+            force: true,
+            recursive: true, // 递归删除
+        });
     }
     sendRender(event);
+    download();
 })
 
 ipcMain.on('render', (event) => {
@@ -106,109 +110,144 @@ function sendRender(event) {
     fs.writeFileSync(configDir, JSON.stringify(config));
 }
 
-const download = () => {
-    const split = 3;
-    const list = config.download.filter(item => !item.downloaded);
-    list.length = list.length > split ? split : list.length;
-    list.forEach(item => {
-        // 暂停状态 完成状态 进行中 出错
-        if (item.paused || item.downloaded || item.loading || item.error) {
+const downloading = {};
+
+const downloaditem = (item) => {
+    if (downloading[item.link + item.filename]) {
+        return;
+    }
+
+    downloading[item.link + item.filename] = true;
+
+    const load = () => {
+        if (item.paused) {
+            downloading[item.link + item.filename] = false;
             return;
         }
-        if (item.init) {
-            item.downloaded = item.source.length === item.finish.length;
-            if (item.downloaded) {
+        if (item.source) {
+            if (item.source.length === 0) {
+                item.downloaded = true;
+                item.process = '合成中';
+                merge(item, false);
                 return;
             }
-            if (item.finish.length % split !== 0) {
-                return;
-            }
-            const target = item.source.slice(item.finish.length, item.finish.length + split);
-            target.forEach(name => {
-                const link = `${item.dirname}/${name}`;
-                fetch.get(link, {
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36',
-                        'X-Requested-With': 'XMLHttpRequest'
+            item.process = Math.round((item.total - item.source.length) / item.total * 10000) / 100 + '%';
+            const list = item.source.splice(0, 5);
+            Promise.allSettled(list.map(name => axios.get(`${item.sourcedir}/${name}`, {
+                responseType: 'arraybuffer',
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            }))).then(content => {
+                content.forEach((result, idx) => {
+                    if (result.status === 'fulfilled' && result.value.status === 200) {
+                        fs.writeFileSync(`${item.dirname}/${list[idx]}`, result.value.data);
+                    } else {
+                        item.source.push(list[idx]);
                     }
-                }).then(content => {
-                    item.finish.push(name);
-                    item.process = Math.round(item.finish.length / (item.source.length + item.fail.length) * 100) + '%';
-                    const link = `${path.resolve('temp')}/${item.temp}/`;
-                    if (!fs.existsSync(link)) {
-                        fs.mkdirSync(link, {
-                            recursive: true,
-                        });
-                    }
-                    fs.writeFileSync(`${link}${name}`, content);
-                }).catch((err) => {
-                    item.fail.push(name);
-                    item.error = true;
-                    console.log('出错', err);
-                })
+                });
+                load();
+            }).catch((err) => {
+                item.source.push(...list);
+                load();
+                console.log(err);
             })
         } else {
-            item.loading = true;
-            fetch.get(item.link).then(content => {
-                item.init = true;
-                item.loading = false;
-                item.finish = [];
-                item.fail = [];
-                item.source = `${content}`.match(/\w+\.ts/g) || [];
-                item.dirname = path.dirname(item.link);
-            }).catch((err) => {
+            axios({
+                method: 'GET',
+                url: item.link
+            }).then(({ data = '' }) => {
+                item.source = `${data}`.match(/\w+\.ts/g) || [];
+                item.source.length = 5;
+                item.dirname = `${path.resolve('temp')}/${item.temp}/`;
+                item.sourcedir = path.dirname(item.link);
+                item.total = item.source.length;
+                // 写入合并文件
+                if (!fs.existsSync(item.dirname)) {
+                    fs.mkdirSync(item.dirname, {
+                        recursive: true,
+                    });
+                }
+                const source = item.source.map(name => `file ${name}`);
+                source.unshift("ffconcat version 1.0");
+                fs.writeFileSync(`${item.dirname}combine.txt`, source.join('\n'));
+                load();
+            }).catch(() => {
                 item.error = true;
-                console.log('错误', err);
+                item.process = '下载出错';
             });
         }
-    });
-    setTimeout(download, 3000);
+    }
+    load();
+}
+
+const download = () => {
+    const split = 1;
+    const list = config.download.filter(item => !item.downloaded && !item.paused && !item.completed);
+    list.length = list.length > split ? split : list.length;
+    list.forEach(downloaditem);
 }
 
 download();
 
 const mergeing = {};
 
-const merge = (item) => {
-    if (mergeing[item.link + item.filename]) {
+const merge = (item, node) => {
+    if (mergeing[item.link + item.filename] || item.completed) {
         return;
     }
+
     mergeing[item.link + item.filename] = true;
-    const combine = () => {
-        if (item.source.length === 0) {
-            item.completed = true;
-            mergeing[item.link + item.filename] = false;
-            const link = `${path.resolve('temp')}/${item.temp}`;
-            setTimeout(() => {
-                if (fs.existsSync(link)) {
-                    fs.rmdirSync(link, {
+    const result = execSync('ffmpeg -version').toString();
+    const link = `${path.resolve('temp')}/${item.temp}`;
+    const outlink = path.normalize(`${config.direction}/${item.filename}`);
+    if (result.includes('ffmpeg version') && !node) {
+        exec(`cd ${link} && ffmpeg -i combine.txt -acodec copy -vcodec copy -absf aac_adtstoasc ${outlink}`, (err, result) => {
+            if (!err) {
+                downloading[item.link + item.filename] = false;
+                mergeing[item.link + item.filename] = false;
+                item.completed = true;
+                item.process = '100%';
+
+                const removelink = `${path.resolve('temp')}/${item.temp}`;
+                setTimeout(() => {
+                    fs.rmSync(removelink, {
+                        force: true,
                         recursive: true, // 递归删除
                     });
-                }
-            }, 3000)
-            return;
-        }
-        try {
-            const name = item.source.splice(0, 1);
-            const inlink = `${path.resolve('temp')}/${item.temp}/${name}`;
-            const content = fs.readFileSync(inlink);
-            const outlink = path.normalize(`${config.direction}/${item.filename}`);
-            fs.appendFileSync(outlink, content);
-            fs.unlinkSync(inlink);
-        } catch {
+                }, 1000);
+            } else {
+                merge(item, true);
+            }
+        })
+    } else {
+        const source = fs.readFileSync(`${item.dirname}combine.txt`, 'utf-8').split('\n').splice(1);
+        const combine = () => {
+            if (source.length === 0) {
+                downloading[item.link + item.filename] = false;
+                mergeing[item.link + item.filename] = false;
+                item.completed = true;
+                item.process = '100%';
 
+                const removelink = `${path.resolve('temp')}/${item.temp}`;
+                setTimeout(() => {
+                    fs.rmSync(removelink, {
+                        force: true,
+                        recursive: true, // 递归删除
+                    });
+                }, 1000)
+                return;
+            }
+            const [name] = source.splice(0, 1);
+            if (name) {
+                const inlink = `${path.resolve('temp')}/${item.temp}/${name.replace('file ', '')}`;
+                const content = fs.readFileSync(inlink);
+                const outlink = path.normalize(`${config.direction}/${item.filename}`);
+                fs.appendFileSync(outlink, content);
+            }
+            combine();
         }
         combine();
     }
-    combine();
 }
-
-const combine = () => {
-    const list = config.download.filter(item => item.downloaded && !item.completed);
-    list.forEach(item => {
-        item.finish = [];
-        merge(item);
-    })
-    setTimeout(download, 3000);
-}
-combine();
