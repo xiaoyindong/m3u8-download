@@ -66,6 +66,13 @@ window.addEventListener('DOMContentLoaded', () => {
     ipcRenderer.on('ffmpeg_success', () => {
         document.querySelector('#set_ffmpeg').innerText = '已安装';
     })
+
+    ipcRenderer.send('get_direction');
+    ipcRenderer.on('update_direction', (event, data) => {
+        if (data) {
+            dirctionInput.value = data;
+        }
+    })
     
     function render(download) {
         let str = '';

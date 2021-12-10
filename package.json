@@ -4,14 +4,16 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "start": "nodemon --watch app.js --exec npm run build",
+    "dev": "nodemon --watch app.js --exec npm run build",
     "build": "electron ."
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "axios": "^0.24.0",
     "electron": "^15.1.0",
     "nodemon": "^2.0.13"
+  },
+  "dependencies": {
+    "axios": "^0.24.0"
   }
 }

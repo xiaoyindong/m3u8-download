@@ -85,9 +85,12 @@ ipcMain.on('delete_download', (event, index) => {
 
 ipcMain.on('render', (event) => {
     sendRender(event);
-})
+});
 
-
+// 出发消息，传入direction
+ipcMain.on('get_direction', (event) => {
+    event.sender.send('update_direction', config.direction || '');
+});
 
 ipcMain.on('set_ffmpeg', (event) => {
     const result = execSync('ffmpeg -version').toString();
@@ -142,7 +145,9 @@ const downloaditem = (item) => {
             }))).then(content => {
                 content.forEach((result, idx) => {
                     if (result.status === 'fulfilled' && result.value.status === 200) {
-                        fs.writeFileSync(`${item.dirname}/${list[idx]}`, result.value.data);
+                        if (fs.existsSync(item.dirname)) {
+                            fs.writeFileSync(`${item.dirname}/${list[idx]}`, result.value.data);
+                        }
                     } else {
                         item.source.push(list[idx]);
                     }
@@ -159,7 +164,6 @@ const downloaditem = (item) => {
                 url: item.link
             }).then(({ data = '' }) => {
                 item.source = `${data}`.match(/\w+\.ts/g) || [];
-                item.source.length = 5;
                 item.dirname = `${path.resolve('temp')}/${item.temp}/`;
                 item.sourcedir = path.dirname(item.link);
                 item.total = item.source.length;
@@ -209,14 +213,11 @@ const merge = (item, node) => {
                 mergeing[item.link + item.filename] = false;
                 item.completed = true;
                 item.process = '100%';
-
                 const removelink = `${path.resolve('temp')}/${item.temp}`;
-                setTimeout(() => {
-                    fs.rmSync(removelink, {
-                        force: true,
-                        recursive: true, // 递归删除
-                    });
-                }, 1000);
+                fs.rmSync(removelink, {
+                    force: true,
+                    recursive: true, // 递归删除
+                });
             } else {
                 merge(item, true);
             }
@@ -231,12 +232,10 @@ const merge = (item, node) => {
                 item.process = '100%';
 
                 const removelink = `${path.resolve('temp')}/${item.temp}`;
-                setTimeout(() => {
-                    fs.rmSync(removelink, {
-                        force: true,
-                        recursive: true, // 递归删除
-                    });
-                }, 1000)
+                fs.rmSync(removelink, {
+                    force: true,
+                    recursive: true, // 递归删除
+                });
                 return;
             }
             const [name] = source.splice(0, 1);
